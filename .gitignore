@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.coverage
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+env/
+build/
+dist/
+
+# Environment
+.env
+.env.local
+
+# Vector store + model artifacts
+chroma_db/
+.ollama/
+*.gguf
+
+# Local agent state
+.CLAUDE
+.claude/
+CLAUDE.md
+
+# Local planning artifacts (kept out of the public repo)
+PLAN_*.md
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

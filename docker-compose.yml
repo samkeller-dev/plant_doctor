@@ -1,0 +1,62 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # One-shot sidecar: pulls the LLM + embedding models into the ollama
+  # volume on first boot, then exits. `app` waits for this to complete.
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        echo "Pulling ${OLLAMA_LLM_MODEL:-mistral:7b-instruct}..."
+        ollama pull "${OLLAMA_LLM_MODEL:-mistral:7b-instruct}"
+        echo "Pulling ${OLLAMA_EMBED_MODEL:-nomic-embed-text}..."
+        ollama pull "${OLLAMA_EMBED_MODEL:-nomic-embed-text}"
+        echo "Models ready."
+    restart: "no"
+
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      CHROMA_PERSIST_DIR: /app/chroma_db
+      CORPUS_DIR: /app/corpus
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/app/chroma_db
+    depends_on:
+      ollama:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  ollama_models:
+  chroma_data:
