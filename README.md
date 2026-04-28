@@ -55,8 +55,9 @@ This repo is a focused demonstration of a small, well-guarded retrieval-augmente
 ```bash
 cp .env.example .env
 docker compose up -d --build
-# wait for ollama-init to finish pulling models (a few GB on first run)
-docker compose run --rm app python scripts/ingest.py
+# wait for ollama-init to finish pulling models (~4.7 GB on first run)
+docker compose run --rm app python -m scripts.ingest
+docker compose restart app   # app cold-starts before Chroma exists; restart picks up the index
 ```
 
 The app is now live at `http://localhost:8000`.
@@ -72,7 +73,7 @@ python -m venv .venv && source .venv/bin/activate   # or .\.venv\Scripts\activat
 pip install -r requirements.txt
 cp .env.example .env
 # Edit OLLAMA_BASE_URL=http://localhost:11434 in .env
-python scripts/ingest.py
+python -m scripts.ingest
 uvicorn app.main:app --reload
 ```
 

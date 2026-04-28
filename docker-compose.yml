@@ -2,8 +2,9 @@ services:
   ollama:
     image: ollama/ollama:latest
     restart: unless-stopped
-    ports:
-      - "11434:11434"
+    # No host port binding — only the `app` service needs to reach ollama,
+    # and it does so over the compose network at http://ollama:11434.
+    # Add `ports: ["11434:11434"]` if you want host-side debugging access.
     volumes:
       - ollama_models:/root/.ollama
     healthcheck:

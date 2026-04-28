@@ -78,7 +78,10 @@ def build_engine(config: RagConfig | None = None) -> RagEngine:
     llm = Ollama(
         model=cfg.llm_model,
         base_url=cfg.ollama_base_url,
-        request_timeout=120.0,
+        # Generous timeout: cold-loading mistral:7b-instruct on CPU can
+        # take a couple of minutes the first time before the model is
+        # resident in memory. Subsequent calls finish in seconds.
+        request_timeout=600.0,
         json_mode=True,
     )
     Settings.llm = llm
@@ -126,9 +129,12 @@ def _compute_centroid_from_chroma(collection) -> list[float]:
     from .guardrails import centroid
 
     data = collection.get(include=["embeddings"])
-    embeddings = data.get("embeddings") or []
-    if not embeddings:
+    # Chroma returns a numpy ndarray (shape: n_docs × dim) when embeddings are
+    # present, or None when the field wasn't requested. Avoid `or []` here
+    # because `bool(ndarray)` raises ValueError for multi-element arrays.
+    embeddings = data.get("embeddings")
+    if embeddings is None or len(embeddings) == 0:
         raise RuntimeError(
-            "Chroma collection is empty. Run `python scripts/ingest.py` first."
+            "Chroma collection is empty. Run `python -m scripts.ingest` first."
         )
-    return centroid(list(embeddings))
+    return centroid([list(v) for v in embeddings])
